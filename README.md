@@ -3,23 +3,18 @@ R1Concepts
 
 # Build a Kubernetes cluster using K3s via Ansible
 
-Author: <https://github.com/itwars>  
-Current Maintainer: <https://github.com/dereknola>
+Author: <dung.nguyen@r1concepts.com>  
+Current Maintainer: <dung.nguyen@r1concepts.com>
 
 Easily bring up a cluster on machines running:
 
 - [X] Debian
 - [X] Ubuntu
-- [X] Raspberry Pi OS
 - [X] RHEL Family (CentOS, Redhat, Rocky Linux...)
-- [X] SUSE Family (SLES, OpenSUSE Leap, Tumbleweed...)
-- [X] ArchLinux
 
 on processor architectures:
 
 - [X] x64
-- [X] arm64
-- [X] armhf
 
 ## System requirements
 
@@ -235,3 +230,19 @@ See these other projects:
 - https://github.com/jon-stumpf/k3s-ansible
 - https://github.com/alexellis/k3sup
 - https://github.com/axivo/k3s-cluster
+
+
+Local Git
+[core]
+  repositoryformatversion = 0
+  filemode = true
+  bare = false
+  logallrefupdates = true
+[remote "origin"]
+  url = file:///home/nickfarrow/Pictures/GIT/install-k3s.git
+  fetch = +refs/heads/*:refs/remotes/origin/*
+[branch "master"]
+  remote = origin
+  merge = refs/heads/master
+
+

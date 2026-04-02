@@ -1,0 +1,75 @@
+- set_fact:
+    k8s_ctrl_plane_node: "{{ ansible_host }}"
+    k8s_user: "{{ ansible_user }}"
+
+###Tasks for kubeadm config images pull
+- name: Include tasks for kubeadm config images pull
+  include_tasks: kubeadm_config_images_pull.yaml
+
+###Tasks for kubeadm init
+- name: Include tasks for kubeadm init
+  include_tasks: kubeadm_init.yaml
+
+###Tasks to create Kubernetes config for the k8s user
+- name: Include tasks for creating Kubernetes config for user {{ k8s_user }}
+  include_tasks: create_kube_config.yaml
+
+###Task to check Kube API server's health
+- name: Checking Kube API server's health (this might take some time).
+  command: curl -skL https://localhost:6443/healthz
+  register: api_server_health_status
+  until: api_server_health_status.stdout.find("ok") != -1
+  retries: 500
+  delay: 5
+  changed_when: false
+
+###Tasks to apply Calico CNI manifest
+- name: Include tasks to apply Calico CNI manifest
+  include_tasks: apply_calico_cni_manifest.yaml
+
+###Tasks to check Ready status of control-plane node
+- name: Wait for control-plane to get Ready
+  command: kubectl get nodes --no-headers -l node-role.kubernetes.io/control-plane
+  register: control_plane_ready_status
+  retries: 500
+  until: control_plane_ready_status.stdout_lines | select('search', ' Ready ') | list | length > 0 
+  delay: 5
+  changed_when: false
+  failed_when: false
+
+- name: Get the status of control-plane node
+  command: kubectl get nodes --no-headers -l node-role.kubernetes.io/control-plane
+  register: nodes_status
+  changed_when: false
+
+- name: Notify the status of control-plane node
+  debug:
+    msg: |-
+      {{ nodes_status.stdout_lines }}
+
+###Tasks to create kubeadm token required for joining nodes with the cluster
+- name: Create kubeadm token required for joining nodes with the cluster
+  command: kubeadm token create --print-join-command
+  register: kubeadm_join_command_register
+  changed_when: false
+
+- set_fact:
+    kubeadm_worker_node_join_command: "{{ kubeadm_join_command_register.stdout }}"
+
+###Task to generate certificate key for joining additional control planes 
+- name: Generate certificate key to join remaining control planes in case of HA Setup
+  command: kubeadm init phase upload-certs --upload-certs
+  register: cert_key_output
+  changed_when: false
+  become: true
+  when: k8s_control_plane_endpoint is defined
+
+- set_fact:
+    certificate_key: "{{ cert_key_output.stdout_lines[-1] }}"
+  when: k8s_control_plane_endpoint is defined
+
+- set_fact:
+    kubeadm_ctrl_plane_node_join_command: "{{ kubeadm_worker_node_join_command }} --control-plane --certificate-key {{ certificate_key }}"
+  when: k8s_control_plane_endpoint is defined
+
+########################### EOF ##########################################

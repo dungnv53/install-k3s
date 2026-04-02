@@ -1,0 +1,109 @@
+###Tasks to upgrade the system packages
+- name: Include tasks to upgrade the system packages
+  include_tasks: upgrade_os.yaml 
+
+
+###Tasks to disable swap memory
+- name: Include tasks to disable swap
+  include_tasks: disable_swap.yaml 
+
+
+###Tasks to load required kernel modules
+- name: Include tasks to load required kernel modules
+  include_tasks: load_kernel_modules.yaml
+
+
+###Tasks to load required kernel parameters
+- name: Include tasks to load required kernel parameters
+  include_tasks: load_kernel_parameters.yaml
+
+
+###Tasks to install runc
+- name: Check if runc is already installed
+  command: runc --version
+  register: runc_check
+  ignore_errors: true
+  failed_when: false
+  changed_when: false
+
+- name: Notify about runc installation status
+  debug:
+    msg: |-
+      runc is {{ 'already installed.' if runc_check.rc == 0 else 'not installed. Proceeding with installation.' }}
+
+- name: Include tasks to download and install runc
+  include_tasks: install_runc.yaml
+  when: runc_check.rc != 0
+
+- name: Check runc version
+  command: runc --version
+  register: check_runc_version
+  changed_when: false
+
+- name: Notify runc version
+  debug:
+    msg: |-
+      {{ check_runc_version.stdout_lines }}
+
+
+###Task to install containered
+- name: Check if containerd is already installed
+  command: containerd --version
+  register: containerd_check
+  ignore_errors: true
+  failed_when: false  
+  changed_when: false
+
+- name: Notify about containerd installation status
+  debug:
+    msg: |-
+      Containerd is {{ 'already installed.' if containerd_check.rc == 0 else 'not installed. Proceeding with installation.' }}
+
+- name: Include tasks to download and install containerd
+  include_tasks: install_containerd.yaml
+  when: containerd_check.rc != 0
+
+- name: Check containerd version
+  command: containerd --version
+  register: check_containerd_version
+  changed_when: false
+
+- name: Notify containerd version
+  debug:
+    msg: |-
+      containerd version is {{ check_containerd_version.stdout_lines }}
+
+###Task to install kubelet, kubeadm and kubectl packages 
+- name: Tasks for RedHat based Distributions to install kubelet, kubeadm and kubectl packages
+  when: ansible_os_family == "RedHat"
+  include_tasks: redhat_tasks.yaml
+    
+- name: Tasks for Debian based Distributions to install kubelet, kubeadm and kubectl packages
+  when: ansible_os_family == "Debian"
+  include_tasks: debian_tasks.yaml
+
+- name: Tasks for Suse based Distributions to install kubelet, kubeadm and kubectl packages
+  when: ansible_os_family == "Suse"
+  include_tasks: suse_tasks.yaml
+
+
+###Tasks to Enable and start kubelet service                 
+- name: Enable and start kubelet.service
+  become: true
+  systemd:
+    name: kubelet.service
+    enabled: yes
+    state: started
+
+- name: Check kubelet service status
+  command: systemctl is-enabled kubelet
+  register: kubelet_service_status
+  changed_when: false
+
+- name: Notify if the kubelet service is enabled
+  debug:
+    msg: |-
+      kubelet service is enabled.
+  when: kubelet_service_status.stdout == 'enabled'
+
+################################# EOF ########################################

@@ -1,0 +1,2 @@
+containerd_temp_binary_tarball: "/tmp/temp-containerd.tar.gz"
+runc_temp_binary: "/tmp/temp-runc"

@@ -1,0 +1,16 @@
+# rancher-custom-cluster.yaml
+apiVersion: management.cattle.io/v3
+kind: Cluster
+metadata:
+  name: custom-production
+  namespace: fleet-default
+spec:
+  displayName: Custom Production Cluster
+  rkeConfig:
+    kubernetesVersion: v1.28.4+rke2r1
+    machineGlobalConfig:
+      cni: calico
+      disable:
+        - rke2-ingress-nginx
+      secrets-encryption: true
+

@@ -1,0 +1,43 @@
+- name: Add k8s rpm repository ( Suse based systems )
+  become: true
+  zypper_repository:
+    description: k8s-{{ k8s_version_major_minor }}
+    name: k8s-{{ k8s_version_major_minor }}
+    repo: https://pkgs.k8s.io/core:/stable:/{{ k8s_version_major_minor }}/rpm/
+    auto_import_keys: true
+    enabled: true
+    state: present
+    
+- name: Install kubelet, kubeadm and kubectl packages ( Suse based systems )
+  become: true
+  zypper:
+    update_cache: true
+    name:
+      - "kubelet-{{ k8s_latest_version | regex_replace('^v', '') }}"
+      - "kubeadm-{{ k8s_latest_version | regex_replace('^v', '') }}"
+      - "kubectl-{{ k8s_latest_version | regex_replace('^v', '') }}"
+      - bash-completion 
+    state: present
+
+- name: Check package lock status of kubelet, kubeadm and kubectl (SUSE-based systems)
+  become: true
+  command: zypper locks
+  register: k8s_packages_suse_lock_status
+  failed_when: false
+  changed_when: false
+  ignore_errors: true
+
+- name: Check if kubelet, kubeadm and kubectl packages are locked already (SUSE-based systems)
+  set_fact:
+    k8s_packages_locked: "{{ k8s_packages_suse_lock_status.stdout | regex_search('kubeadm|kubectl|kubelet') is not none }}"
+
+- name: Lock kubelet, kubeadm and kubectl packages from upgrades (SUSE-based systems)
+  become: true
+  command: zypper addlock {{ item }}
+  loop:
+    - kubelet
+    - kubeadm
+    - kubectl
+  when: not k8s_packages_locked
+
+################################## EOF ####################################

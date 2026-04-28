@@ -112,3 +112,44 @@ microk8s kubectl patch kafka dev-cluster -n kafka --type=merge -p '
     }
   }
 }'
+
+k8s now show only 2 pods
+kubectl get pod -n kafka
+NAME                                        READY   STATUS    RESTARTS   AGE
+kafka-ui-5976bdb5cd-v82x6                   1/1     Running   0          3h3m
+strimzi-cluster-operator-6c85688f64-qx9n9   1/1     Running   0          167m
+
+But service show many => it seem k8s strimzi managed it own "pod" (operator)
+kubectl get service -n kafka
+NAME                          TYPE        CLUSTER-IP       EXTERNAL-IP     PORT(S)                      AGE
+kafka                         ClusterIP   10.152.183.243   <none>          9092/TCP,9095/TCP            27h
+kafka-broker-0-external       NodePort    10.152.183.42    <none>          9094:30094/TCP               22h
+kafka-broker-1-external       NodePort    10.152.183.35    <none>          9094:30095/TCP               22h
+kafka-broker-2-external       NodePort    10.152.183.211   <none>          9094:30096/TCP               22h
+kafka-broker-headless         ClusterIP   None             <none>          9094/TCP,9092/TCP            22h
+kafka-controller-0-external   NodePort    10.152.183.26    192.168.1.225   9094:30097/TCP               22h
+kafka-controller-1-external   NodePort    10.152.183.176   192.168.1.226   9094:30098/TCP               22h
+kafka-controller-2-external   NodePort    10.152.183.100   192.168.1.227   9094:30099/TCP               22h
+kafka-controller-headless     ClusterIP   None             <none>          9094/TCP,9092/TCP,9093/TCP   27h
+kafka-ui                      NodePort    10.152.183.118   <none>          80:30088/TCP                 20h
+
+
+PORTS => this seem expose port that ss netstat and iptables not show
+
+kubectl delete pod kafka-producer -n kafka
+kubectl delete pod kafka-test -n kafka
+
+
+Debug log
+microk8s kubectl logs deployment/strimzi-cluster-operator -n kafka
+
+microk8s kubectl get pvc -n kafka
+no storage (removed before)
+
+microk8s kubectl describe kafka dev-cluster -n kafka
+
+# Restart a deployment
+kubectl rollout restart deployment strimzi-cluster-operator -n kafka  # <operatior-namespace>
+
+# Check StrimziPodSet
+kubectl get strimzipodsets -n <namespace>
